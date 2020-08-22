@@ -149,7 +149,7 @@ cmplx* getcomplex(double* theinput, int length)
 
 void combine(double* signal, double* amplitudes, double* phases, int length)
 {
-    for(int i = 0;i<length;i++)
+    for(int i = 0;i<length/2;i++)
     {
         addcos(signal,length,i,amplitudes[i],phases[i]);
     }
@@ -225,28 +225,35 @@ double getfrequency(int length, double sourcefrequency, int cyclesperwhole)
 {
     double seconds = (double)length/sourcefrequency;
     double frequency = (double)cyclesperwhole/seconds;
-    printf("\r\nseconds: %f, frequency: %f\r\n",seconds,frequency);
+    int other = length-cyclesperwhole;
+    double otherfrequency = (double)other/seconds;
+    printf("seconds: %f, frequency: %f, other: %f\r\n",seconds,frequency,otherfrequency);
     return frequency;
 }
 
 
 int main (int argc, const char* argv[])
 {
-    double testvals[200];// = {1,0,0,0,0,0,0,0,0,0,0,1};
-    for(int i = 0;i<200;i++)
+    double testvals[100];// = {1,0,0,0,0,0,0,0,0,0,0,1};
+    for(int i = 0;i<100;i++)
     {
         testvals[i] = 0.0;// ((double)rand()/RAND_MAX*2)-1.0;
     }
 
-    for(int i = 0;i<20;i++)
+    /*for(int i = 0;i<20;i++)
     {
         testvals[i] = ((double)rand()/RAND_MAX*2)-1.0;
+    }*/
+
+    addcos(testvals,100,1,1.0,0);
+
+    printall(testvals,100);
+
+    printf("\r\n48000kHz, 200 samples\r\n");
+    for(int i = 1;i<=100;i++)
+    {
+        getfrequency(200,48000,i);
     }
-
-    //addcos(testvals,75,1,1.0,0);
-
-    printall(testvals,200);
-
-    getfrequency(2000,48000,1000);
+    //getfrequency(2000,48000,1000);
     return 0;
 }
