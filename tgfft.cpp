@@ -221,18 +221,32 @@ void printall(double* theinput, int length)
 }
 
 
+double getfrequency(int length, double sourcefrequency, int cyclesperwhole)
+{
+    double seconds = (double)length/sourcefrequency;
+    double frequency = (double)cyclesperwhole/seconds;
+    printf("\r\nseconds: %f, frequency: %f\r\n",seconds,frequency);
+    return frequency;
+}
 
 
 int main (int argc, const char* argv[])
 {
-    double testvals[100];// = {1,1,1,0,0,0,1,1,1,0,0,0};
-    for(int i = 0;i<100;i++)
+    double testvals[200];// = {1,0,0,0,0,0,0,0,0,0,0,1};
+    for(int i = 0;i<200;i++)
+    {
+        testvals[i] = 0.0;// ((double)rand()/RAND_MAX*2)-1.0;
+    }
+
+    for(int i = 0;i<20;i++)
     {
         testvals[i] = ((double)rand()/RAND_MAX*2)-1.0;
     }
 
-    //addcos(testvals,100,1,1.0,0);
+    //addcos(testvals,75,1,1.0,0);
 
-    printall(testvals,100);
+    printall(testvals,200);
+
+    getfrequency(2000,48000,1000);
     return 0;
 }
