@@ -147,11 +147,11 @@ cmplx* getcomplex(double* theinput, int length)
 }
 
 
-void combine(double* signal, cmplx* transformed, int length)
+void combine(double* signal, double* amplitudes, double* phases, int length)
 {
     for(int i = 0;i<length;i++)
     {
-        addcos(signal,length,i,transformed[i].re,transformed[i].im);
+        addcos(signal,length,i,amplitudes[i],phases[i]);
     }
 }
 
@@ -170,9 +170,9 @@ void printall(double* theinput, int length)
     for(int i = 0;i<length;i++)
     {
         amplitudes[i] = output[i].getlength();
-        if(amplitudes[i] > 0.0000001)
+        if(amplitudes[i] > 0.00000000000001)
         {
-            phases[i] = output[i].getangle()*rad2deg;
+            phases[i] = output[i].getangle();//*rad2deg;
         }
         else
         {
@@ -209,11 +209,11 @@ void printall(double* theinput, int length)
     {
         combined[i] = 0;
     }
-    combine(combined,output,length);
+    combine(combined,amplitudes,phases,length);
     printf("recombined: \r\n");
     printdoubles(combined,length);
 
-    printf("error? dogshit...: \r\n");
+    printf("error?: \r\n");
     for(int i = 0;i<length;i++)
     {
         printf("%f, ",theinput[i]-combined[i]);
@@ -228,7 +228,7 @@ int main (int argc, const char* argv[])
     double testvals[100];// = {1,1,1,0,0,0,1,1,1,0,0,0};
     for(int i = 0;i<100;i++)
     {
-        testvals[i] = ((double)rand()/RAND_MAX*2)-1.0;//0.0;//sin((float)(i/100.0)*TWO_PI);
+        testvals[i] = ((double)rand()/RAND_MAX*2)-1.0;
     }
 
     //addcos(testvals,100,1,1.0,0);
