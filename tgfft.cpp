@@ -110,6 +110,21 @@ void fouriertransform(cmplx* input, cmplx* output, int length)
 }
 
 
+
+
+
+
+
+
+void addcos(double* signal, int length, int frequency, double level, double phase)
+{
+    for(int i = 0;i<length;i++)
+    {
+        signal[i] += cos(phase+((float)(i)/length)*TWO_PI*(double)frequency )*level;
+    }
+}
+
+
 void printdoubles(double* thedoubles, int length)
 {
     for(int i = 0;i<length;i++)
@@ -129,6 +144,15 @@ cmplx* getcomplex(double* theinput, int length)
         output[i].re = theinput[i];
     }
     return output;
+}
+
+
+void combine(double* signal, cmplx* transformed, int length)
+{
+    for(int i = 0;i<length;i++)
+    {
+        addcos(signal,length,i,transformed[i].re,transformed[i].im);
+    }
 }
 
 
@@ -160,16 +184,40 @@ void printall(double* theinput, int length)
     printf("phases: \r\n");
     printdoubles(phases,length);
 
+    /*
     cmplx backthroughoutput[length];
     //mer??
+    for(int i = 0;i<length;i++)
+    {
+        output[i].im = -output[i].im;
+    }
     fouriertransform(output,backthroughoutput,length);
     //mer?
     for(int i = 0;i<length;i++)
     {
+        //im flip, too.
+        backthroughoutput[i].re*=length;
+    }
+    for(int i = 0;i<length;i++)
+    {
         printf("%f, ",backthroughoutput[i].re);//, backthroughoutput[i].im);
     }
-    printf("\r\n");
+    printf("\r\n");*/
 
+    double combined[length];
+    for(int i = 0;i<length;i++)
+    {
+        combined[i] = 0;
+    }
+    combine(combined,output,length);
+    printf("recombined: \r\n");
+    printdoubles(combined,length);
+
+    printf("error? dogshit...: \r\n");
+    for(int i = 0;i<length;i++)
+    {
+        printf("%f, ",theinput[i]-combined[i]);
+    }
 }
 
 
@@ -180,8 +228,10 @@ int main (int argc, const char* argv[])
     double testvals[100];// = {1,1,1,0,0,0,1,1,1,0,0,0};
     for(int i = 0;i<100;i++)
     {
-        testvals[i] = sin((float)(i/100.0)*TWO_PI);
+        testvals[i] = ((double)rand()/RAND_MAX*2)-1.0;//0.0;//sin((float)(i/100.0)*TWO_PI);
     }
+
+    //addcos(testvals,100,1,1.0,0);
 
     printall(testvals,100);
     return 0;
