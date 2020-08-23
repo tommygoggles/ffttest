@@ -4,6 +4,163 @@
 #include <fstream>//ifstream
 #include <cstring>//strncmp
 
+class wavdata
+{
+    public:
+    int filesize;
+    char* data;
+
+    short channels;
+    unsigned int samplerate;
+
+    short bytespersample;
+
+    short* audiop;
+    unsigned int numberofsamples;
+
+    wavdata();
+    ~wavdata();
+
+    void getfloats(double** channelps);
+    void insertfloats(double*channelp, unsigned short channelno);
+
+    int savedata(const char* filename);
+    int loaddata(const char* filename);
+    int load(const char* filename);
+};
+
+wavdata::wavdata() : filesize(0), data(0)
+{
+
+}
+
+wavdata::~wavdata()
+{
+    if(data)
+    {
+        delete(data);
+    }
+}
+
+
+
+
+int wavdata::load(const char* filename)
+{
+    if(loaddata(filename) != 0){return 1;}
+    if(filesize <= 44){return 2;}
+
+    if(strncmp("RIFF",(const char*)&(data[0]),4)){return 3;}
+    if( *((int*)&(data[4])) != (filesize-8)  ){return 4;}
+    if(strncmp("WAVE",(const char*)&(data[8]),4)){return 5;}
+
+    if(strncmp("fmt ",(const char*)&(data[12]),4)){return 6;}
+    if( *((int*)&(data[16])) != 16 ){return 7;}//16 bytes follow for PCM. others not supported yet.
+    if( *((short*)&(data[20])) != 1 ){return 8;}
+
+    channels = *((short*)&(data[22]));
+    samplerate = *((unsigned int*)&(data[24]));
+    short bitspersample = *((short*)&(data[34]));
+    bytespersample = bitspersample/8;
+    /*
+    28        4   ByteRate         == SampleRate * NumChannels * BitsPerSample/8
+    32        2   BlockAlign       == NumChannels * BitsPerSample/8
+    The number of bytes for one sample including all channels.
+    I wonder what happens when this number isn't an integer?
+    */
+
+    unsigned int searchpoint = 36;
+    bool founddata = false;
+    while(!founddata)
+    {
+        if(searchpoint >= filesize)
+        {
+            return 9;
+        }
+        if(strncmp("data",(const char*)&(data[searchpoint]),4))
+        {
+            printf("Found '%s', looking for 'data'\r\n",(const char*)&(data[searchpoint]));
+            searchpoint += 8+*((unsigned int*)&(data[searchpoint+4]));
+        }
+        else
+        {
+            founddata = true;
+            unsigned int bytesofaudio = *((unsigned int*)&(data[searchpoint+4]));
+            numberofsamples = ((bytesofaudio*8)/channels)/bitspersample;
+            if(bytespersample == 2)
+            {
+                audiop = (short*)&(data[searchpoint+8]);
+            }            
+        }
+        
+    }
+    return 0;
+}
+
+int wavdata::loaddata(const char* filename)
+{
+    std::ifstream stream(filename, std::ios_base::in | std::ios_base::binary);
+    if(!stream.is_open())
+    {
+        return 1;
+    }
+    stream.seekg(0, std::ios::end);
+    filesize = stream.tellg();
+    stream.seekg(0, std::ios::beg);
+    data = new char[filesize];
+    stream.read(data,filesize);
+    return 0;
+}
+
+int wavdata::savedata(const char* filename)
+{
+    std::fstream outputfile;
+    outputfile.open(filename, std::ios::out | std::ios::binary | std::ios::trunc);
+    if(!outputfile.is_open())
+    {
+        return 1;
+    }
+    outputfile.seekg(0, std::ios::beg);
+    outputfile.write(data, filesize);
+    outputfile.close();
+    return 0;
+}
+
+
+void wavdata::getfloats(double** channelps)
+{
+    if(this->bytespersample != 2)
+    {
+        return;
+    }
+    double max = -1.0;
+    double min = 1.0;
+
+    for(unsigned int i = 0;i<numberofsamples;i++)
+    {
+        for(unsigned int chan = 0;chan<channels;chan++)
+        {
+            channelps[chan][i] = (double)audiop[(i*channels)+chan]/32768.0;
+            if(channelps[chan][i]>max){max=channelps[chan][i];}
+            if(channelps[chan][i]<min){min=channelps[chan][i];}
+        }
+    }
+    printf("max = %f, min = %f\r\n",max,min);
+}
+
+void wavdata::insertfloats(double*channelp, unsigned short channelno)
+{
+    for(unsigned int i = 0;i<numberofsamples;i++)
+    {
+        audiop[(i*channels)+channelno] = channelp[i]*32768;
+    }
+}
+
+
+
+
+
+
 #define PI 3.14159265358979323846
 #define TWO_PI (2*PI)
 #define rad2deg (180.0 / PI)
@@ -134,6 +291,15 @@ void addcos(double* signal, int length, int frequency, double level, double phas
 }
 
 
+
+
+
+
+
+
+
+
+
 void printdoubles(double* thedoubles, int length)
 {
     for(int i = 0;i<length;i++)
@@ -165,10 +331,12 @@ void combine(double* signal, double* amplitudes, double* phases, int length)
 }
 
 
+wavdata iine;
+
 void printall(double* theinput, int length)
 {
     printf("input: \r\n");
-    printdoubles(theinput,length);
+    //printdoubles(theinput,length);
 
     cmplx* complexinput = getcomplex(theinput,length);
 
@@ -189,9 +357,9 @@ void printall(double* theinput, int length)
         }        
     }
     printf("amplitudes: \r\n");
-    printdoubles(amplitudes,length);
+    //printdoubles(amplitudes,length);
     printf("phases: \r\n");
-    printdoubles(phases,length);
+    //printdoubles(phases,length);
 
     /*
     cmplx backthroughoutput[length];
@@ -220,12 +388,14 @@ void printall(double* theinput, int length)
     }
     combine(combined,amplitudes,phases,length);
     printf("recombined: \r\n");
-    printdoubles(combined,length);
+    //printdoubles(combined,length);
+
+    iine.insertfloats(combined,0);
 
     printf("error?: \r\n");
     for(int i = 0;i<length;i++)
     {
-        printf("%f, ",theinput[i]-combined[i]);
+        //printf("%f, ",theinput[i]-combined[i]);
     }
 }
 
@@ -242,116 +412,22 @@ double getfrequency(int length, double sourcefrequency, int cyclesperwhole)
 
 
 
-class wavdata
-{
-    public:
-    int filesize;
-    char* data;
 
-    short channels;
-    unsigned int samplerate;
-    short bitspersample;
-    short bytespersample;
-
-    unsigned int startofaudio;
-    unsigned int bytesofaudio;
-    unsigned int bufferlength;
-
-    wavdata();
-    ~wavdata();
-
-    int savedata(const char* filename);
-    int loaddata(const char* filename);
-    int load(const char* filename);
-};
-
-wavdata::wavdata() : filesize(0), data(0)
-{
-
-}
-
-wavdata::~wavdata()
-{
-    if(data)
-    {
-        delete(data);
-    }
-}
-
-
-//16-bit samples are stored as
-//2's-complement signed integers, ranging from -32768 to 32767
-
-
-int wavdata::load(const char* filename)
-{
-    if(loaddata(filename) != 0){return 1;}
-    if(filesize <= 44){return 2;}
-    if(strncmp("RIFF",(const char*)&(data[0]),4)){return 3;}
-    if( *((int*)&(data[4])) != (filesize-8)  ){return 4;}
-    if(strncmp("WAVE",(const char*)&(data[8]),4)){return 5;}
-    if(strncmp("fmt ",(const char*)&(data[12]),4)){return 6;}
-    if( *((int*)&(data[16])) != 16 ){return 7;}//16 bytes follow for PCM. others not supported yet.
-    if( *((short*)&(data[20])) != 1 ){return 8;}
-
-    channels = *((short*)&(data[22]));
-    samplerate = *((unsigned int*)&(data[24]));
-    bitspersample = *((short*)&(data[34]));
-    bytespersample = bitspersample/8;
-    /*28        4   ByteRate         == SampleRate * NumChannels * BitsPerSample/8
-        32        2   BlockAlign       == NumChannels * BitsPerSample/8
-                        The number of bytes for one sample including
-                        all channels. I wonder what happens when
-                        this number isn't an integer?*/
-
-    //floataudio = false;
-
-    printf("%s",(const char*)&(data[36]));
-    if(strncmp("data",(const char*)&(data[36]),4)){return 9;}
-    bytesofaudio = *((unsigned int*)&(data[40]));
-    bufferlength = ((bytesofaudio*8)/channels)/bitspersample;//samplesofaudio
-
-    //assert( (bytesofaudio+44) == filelength);// actually 4 x 44??
-    startofaudio = 44;
-
-    return 0;
-}
-
-int wavdata::loaddata(const char* filename)
-{
-    std::ifstream stream(filename, std::ios_base::in | std::ios_base::binary);
-    if(!stream.is_open())
-    {
-        return 1;
-    }
-    stream.seekg(0, std::ios::end);
-    filesize = stream.tellg();
-    stream.seekg(0, std::ios::beg);
-    data = new char[filesize];
-    stream.read(data,filesize);
-    return 0;
-}
-
-int wavdata::savedata(const char* filename)
-{
-    std::fstream outputfile;
-    outputfile.open(filename, std::ios::out | std::ios::binary | std::ios::trunc);
-    if(!outputfile.is_open())
-    {
-        return 1;
-    }
-    outputfile.seekg(0, std::ios::beg);
-    outputfile.write(data, filesize);
-    outputfile.close();
-    return 0;
-}
 
 
 int main (int argc, const char* argv[])
 {
-    wavdata mong;
-    int l = mong.load("iine.wav");
-    printf("%i\r\n",l);
+    iine.load("iine.wav");
+    double* audiodata[iine.channels];
+    for(int i = 0;i<iine.channels;i++)
+    {
+        audiodata[i] = new double[iine.numberofsamples];
+    }
+    iine.getfloats(audiodata);
+    printall (audiodata[0],4410000);//iine.numberofsamples);
+
+    iine.savedata("altered.wav");
+
 
     double testvals[100];// = {1,0,0,0,0,0,0,0,0,0,0,1};
     for(int i = 0;i<100;i++)
@@ -367,7 +443,7 @@ int main (int argc, const char* argv[])
     addcos(testvals,100,1,1.0,0);
     addcos(testvals,100,27,1.0,0);
 
-    printall(testvals,100);
+    //printall( &(audiodata[0][4410000]),100);//iine.numberofsamples);
 
     /*printf("\r\n48000kHz, 200 samples\r\n");
     for(int i = 1;i<=100;i++)
